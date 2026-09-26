@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuratore Stanze AI con Catalogo</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(180deg, #f4f6f9 0%, #edf2f7 100%); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 980px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 22px; }
+        .box { background: rgba(255,255,255,0.96); padding: 20px; border-radius: 16px; box-shadow: 0 12px 30px rgba(15,23,42,0.08); display: flex; flex-direction: column; height: 600px; border: 1px solid rgba(148,163,184,0.15); }
+        h2 { margin-top: 0; color: #1f2937; border-bottom: 2px solid #eef2f7; padding-bottom: 10px; font-size: 18px; }
+        #chat-box { flex-grow: 1; overflow-y: auto; padding: 12px; margin-bottom: 15px; border: 1px solid #edf2f7; background: linear-gradient(180deg, #fafbfc 0%, #f4f7fb 100%); border-radius: 12px; }
+        .message { margin: 10px 0; padding: 12px 14px; border-radius: 12px; max-width: 88%; font-size: 14px; line-height: 1.5; }
+        .user { background: linear-gradient(135deg, #1e88ff, #0d6efd); color: white; align-self: flex-end; margin-left: auto; box-shadow: 0 8px 18px rgba(13,110,253,0.18); }
+        .assistant { background: linear-gradient(135deg, #f5f7fb, #edf3ff); color: #1f2937; align-self: flex-start; border: 1px solid #dfeafc; }
+        .system { background: #fff7e8; color: #b45309; text-align: center; max-width: 100%; border: 1px solid #f5d9a8; }
+        .structured-response { background: linear-gradient(135deg, #f8fbff, #eef5ff); border: 1px solid #dfeafc; border-radius: 14px; padding: 14px 14px 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.8); }
+        .structured-response h4 { margin: 0 0 12px; color: #1f2a37; font-size: 15px; font-weight: 700; }
+        .response-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+        .response-item { display: flex; align-items: flex-start; gap: 12px; background: rgba(255,255,255,0.9); border: 1px solid #e5edf8; border-left: 4px solid #3b82f6; border-radius: 10px; padding: 10px 12px; }
+        .response-key { min-width: 90px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 800; color: #2563eb; padding-top: 2px; }
+        .response-value { color: #1f2937; flex: 1; line-height: 1.6; }
+        .response-value strong { color: #0f172a; }
+        .response-badge { display: inline-block; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; background: linear-gradient(135deg, #dbeafe, #e0f2fe); color: #075985; margin: 2px 6px 2px 0; }
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; outline: none; }
+        button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        #output-box { justify-content: center; align-items: center; text-align: center; }
+        #result-img { max-width: 100%; max-height: 350px; border-radius: 12px; display: none; margin-top: 15px; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12); border: 1px solid rgba(148,163,184,0.2); }
+        .product-card { background: linear-gradient(135deg, #f6fff8, #eefcf3); border-left: 4px solid #22c55e; padding: 12px 14px; margin: 10px 0; text-align: left; border-radius: 0 12px 12px 0; box-shadow: 0 8px 16px rgba(34,197,94,0.08); }
+        .product-card strong { display: block; color: #166534; margin-bottom: 4px; }
+        .product-card small { color: #475569; display: block; line-height: 1.5; margin-bottom: 8px; }
+        .product-card a { color: #16a34a; font-weight: 700; text-decoration: none; font-size: 13px; }
+        .product-card a:hover { text-decoration: underline; }
+        #loader { display: none; font-weight: bold; color: #475569; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 999px; padding: 8px 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- COLONNA DI SINISTRA: CHATBOT -->
+    <div class="box">
+        <h2>Assistente di Progettazione</h2>
+        <div id="chat-box">
+            <div class="message assistant">Benvenuto! Sono il tuo progettista virtuale. Che tipo di stanza desideri rinnovare oggi? (Es. Bagno, Soggiorno, Cucina...)</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Scrivi la tua risposta..." onkeydown="if(event.key==='Enter') inviaMessaggio()">
+            <button onclick="inviaMessaggio()">Invia</button>
+        </div>
+    </div>
+
+    <!-- COLONNA DI DESTRA: RENDERING E CATALOGO -->
+    <div class="box" id="output-box">
+        <h2>Anteprima Rendering & Catalogo</h2>
+        <div id="loader">Generazione del rendering in corso (circa 10s)...</div>
+        <div id="status-text">Rispondi alle domande dell'assistente per generare la bozza della tua stanza.</div>
+        <img id="result-img" src="" alt="Rendering della stanza">
+        
+        <div id="lista-prodotti" style="width: 100%; margin-top: 15px; overflow-y: auto; display: none;">
+            <h4 style="margin: 5px 0; text-align: left; color: #28a745;">Prodotti consigliati dal nostro catalogo:</h4>
+            <div id="prodotti-container"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:3000';
+    let chatHistory = [];
+
+    function aggiungiInChat(testo, chi) {
+        const chatBox = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = `message ${chi}`;
+        div.innerText = testo;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function parseStructuredContent(rawText) {
+        if (rawText === null || rawText === undefined) return null;
+        if (typeof rawText === 'object') return rawText;
+
+        const possible = String(rawText).trim();
+        if (!possible) return null;
+
+        const candidates = [];
+        candidates.push(possible);
+
+        const jsonMatch = possible.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+        if (jsonMatch) {
+            candidates.push(jsonMatch[0]);
+        }
+
+        const fenced = possible.replace(/```json|```/gi, '').trim();
+        if (fenced !== possible) {
+            candidates.push(fenced);
+        }
+
+        for (const candidate of candidates) {
+            try {
+                return JSON.parse(candidate);
+            } catch {
+                // continue searching for a valid JSON payload
+            }
+        }
+
+        return null;
+    }
+
+    function renderStructuredData(data) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'structured-response';
+
+        const title = document.createElement('h4');
+        title.textContent = 'Dettagli configurazione';
+        wrapper.appendChild(title);
+
+        const list = document.createElement('ul');
+        list.className = 'response-list';
+
+        const entries = Array.isArray(data) ? data : Object.entries(data || {});
+
+        entries.forEach(([key, value]) => {
+            if (key === 'status' && typeof value === 'string') {
+                return;
+            }
+
+            const item = document.createElement('li');
+            item.className = 'response-item';
+
+            const label = document.createElement('div');
+            label.className = 'response-key';
+            label.textContent = key.replace(/_/g, ' ');
+
+            const content = document.createElement('div');
+            content.className = 'response-value';
+
+            if (Array.isArray(value)) {
+                const values = value.map(v => {
+                    if (typeof v === 'object' && v !== null) {
+                        return `<strong>${v.nome || v.name || 'Prodotto'}</strong>`;
+                    }
+                    return `<span class="response-badge">${v}</span>`;
+                }).join(' ');
+                content.innerHTML = values;
+            } else if (typeof value === 'object' && value !== null) {
+                const text = Object.entries(value)
+                    .map(([nestedKey, nestedValue]) => `<strong>${nestedKey.replace(/_/g, ' ')}</strong>: ${nestedValue}`)
+                    .join('<br>');
+                content.innerHTML = text;
+            } else {
+                content.textContent = value;
+            }
+
+            item.appendChild(label);
+            item.appendChild(content);
+            list.appendChild(item);
+        });
+
+        wrapper.appendChild(list);
+        return wrapper;
+    }
+
+    function aggiungiRispostaStrutturata(rawText) {
+        const chatBox = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = 'message assistant';
+
+        const parsed = parseStructuredContent(rawText);
+        if (parsed && typeof parsed === 'object') {
+            div.appendChild(renderStructuredData(parsed));
+        } else {
+            div.innerText = rawText;
+        }
+
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function inviaMessaggio() {
+        const input = document.getElementById('user-input');
+        const testo = input.value.trim();
+        if(!testo) return;
+
+        input.value = '';
+        aggiungiInChat(testo, 'user');
+        chatHistory.push({ role: "user", content: testo });
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: chatHistory })
+            });
+            const result = await response.json();
+
+            if (result.status === "chatting") {
+                chatHistory.push({ role: "assistant", content: result.message });
+                aggiungiRispostaStrutturata(result.message);
+            } else if (result.status === "completed") {
+                document.getElementById('status-text').style.display = 'none';
+                document.getElementById('loader').style.display = 'block';
+                aggiungiInChat("Ottimo! Ho trovato i materiali perfetti. Sto generando il rendering...", "assistant");
+
+                if (result.data) {
+                    aggiungiRispostaStrutturata(JSON.stringify(result.data));
+                }
+
+                // Mostra i prodotti del catalogo identificati dall'IA
+                mostraCatalogoUtilizzato(result.prodotti);
+
+                // Avvia la chiamata al secondo endpoint per l'immagine
+                await richiediRendering(result.data);
+            }
+        } catch (error) {
+            aggiungiInChat("Errore di connessione con il server.", "system");
+        }
+    }
+
+    async function richiediRendering(datiStanza) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/render`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datiStanza)
+            });
+            const renderResult = await response.json();
+
+            document.getElementById('loader').style.display = 'none';
+            if(renderResult.success) {
+                const img = document.getElementById('result-img');
+                img.src = renderResult.imageUrl;
+                img.style.display = 'block';
+            } else {
+                document.getElementById('status-text').innerText = "Impossibile generare l'immagine.";
+                document.getElementById('status-text').style.display = 'block';
+            }
+        } catch (error) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('status-text').innerText = "Errore di rete durante il rendering.";
+            document.getElementById('status-text').style.display = 'block';
+        }
+    }
+
+    function mostraCatalogoUtilizzato(prodotti) {
+        const container = document.getElementById('prodotti-container');
+        container.innerHTML = '';
+        if(prodotti.length === 0) {
+            container.innerHTML = '<p style="font-size:12px; color:#999;">Nessun prodotto specifico del catalogo associato.</p>';
+        } else {
+            prodotti.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <strong>${p.nome}</strong> (Cod: ${p.id})<br>
+                    <small style="color:#555;">${p.descrizione}</small><br>
+                    <a href="${p.url}" target="_blank">Visualizza nel sito →</a>
+                `;
+                container.appendChild(card);
+            });
+        }
+        document.getElementById('lista-prodotti').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
